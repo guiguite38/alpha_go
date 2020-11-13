@@ -18,7 +18,9 @@ class myPlayer(PlayerInterface):
 
     def __init__(self):
         self._board = Goban.Board()
-        self._mycolor = None
+        self._mycolor = None        
+        score= self._board.Goban.compute_score() # !! slow, to be replaced --> faire un lazyloading en attendant
+        self._heuristic = scores[abs(self._mycolor)] - scores[abs(self._mycolor-1)]
 
     def getPlayerName(self):
         return "Random Player"
@@ -28,7 +30,18 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS" 
         moves = self._board.legal_moves() # Dont use weak_legal_moves() here!
-        move = choice(moves) 
+        
+        # remplacer par le maximum de w/n + c *np.sqrt(ln(N)/n)
+        # w = nb wins by successor
+        # n = nb visits of successor
+        # c = sqrt(2) 
+        # N = nb visits of father node
+        
+
+        # prior --> Rollout
+        # value --> scoring system
+            
+        move = choice(moves) # random choice
         self._board.push(move)
 
         # New here: allows to consider internal representations of moves
