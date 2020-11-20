@@ -192,7 +192,7 @@ def create_dataset_prior(data):
     input_data = []
     output_data = []
     for sample in data:
-        output_sample = sample["list_of_moves"][3]
+        output_name = sample["list_of_moves"][-1]
         input_sample = {}
 
         if len(sample["black_stones"]) > len(sample["white_stones"]):
@@ -202,18 +202,25 @@ def create_dataset_prior(data):
             input_sample["black_stones"] = sample["black_stones"]
             input_sample["white_stones"] = sample["white_stones"][:-1]
 
-        output_data.append(output_sample)
+        x,y = name_to_coord(output_name)
+        output_board = np.zeros((9,9))
+        output_board[x,y] = 1
+        
+        output_data.append(output_board)
         input_data.append(make_board(input_sample))
     return input_data, output_data
 
-
-data = get_raw_data_go()[0]
+data = get_raw_data_go()[:1]
 input_test, output_test = create_dataset_prior(data)
-
 print(output_test)
+print(data)
 
 data = get_raw_data_go()
 # (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9,2)
+
+
+####################################
+######### MODEL DEFINITION #########
 
 model = Sequential()
 model.add(
@@ -226,7 +233,7 @@ model.add(
 # model.add(Dropout(0.5))
 model.add(Flatten())
 model.add(Dense(162, activation="softmax"))
-model.add(Dense(18, activation="softmax"))
+model.add(Dense(81, activation="softmax"))
 
 # label = mettre un B et un dans une 18*[0]
 
