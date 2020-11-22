@@ -2,8 +2,11 @@ import numpy as np
 import tensorflow.keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
-from tensorflow.keras.layers import Conv2D, BatchNormalization
+from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D
 import tensorflow.keras.optimizers as optimizers
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import tensorflow.keras.backend as kb
 
 
 ## LECTURE DES DONNEES
@@ -182,6 +185,43 @@ def make_board(sample):
 # pour l'améliorer on veut jouer des coups probables pour accélérer le roll out
 # donc on veut la proba de jouer un coup à partir d'un plateau donné
 
+# fonction utilitaire pour visualisation de l'entraînement (cours bpesquet)
+def plot_loss_acc(history):
+    """Plot training and (optionally) validation loss and accuracy"""
+
+    loss = history.history['loss']
+    epochs = range(1, len(loss) + 1)
+
+    plt.figure(figsize=(10, 10))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(epochs, loss, '.--', label='Training loss')
+    final_loss = loss[-1]
+    title = 'Training loss: {:.4f}'.format(final_loss)
+    plt.ylabel('Loss')
+    if 'val_loss' in history.history:
+        val_loss = history.history['val_loss']
+        plt.plot(epochs, val_loss, 'o-', label='Validation loss')
+        final_val_loss = val_loss[-1]
+        title += ', Validation loss: {:.4f}'.format(final_val_loss)
+    plt.title(title)
+    plt.legend()
+
+    acc = history.history['accuracy']
+
+    plt.subplot(2, 1, 2)
+    plt.plot(epochs, acc, '.--', label='Training acc')
+    final_acc = acc[-1]
+    title = 'Training accuracy: {:.2f}%'.format(final_acc * 100)
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    if 'val_accuracy' in history.history:
+        val_acc = history.history['val_accuracy']
+        plt.plot(epochs, val_acc, 'o-', label='Validation acc')
+        final_val_acc = val_acc[-1]
+        title += ', Validation accuracy: {:.2f}%'.format(final_val_acc * 100)
+    plt.title(title)
+    plt.legend()
 
 # on veut make un board avec extraction préalable du dernier qui sera considéré comme un label
 def create_dataset_prior(data):
@@ -192,62 +232,104 @@ def create_dataset_prior(data):
     input_data = []
     output_data = []
     for sample in data:
-        output_name = sample["list_of_moves"][-1]
-        input_sample = {}
+        if "PASS" not in sample["list_of_moves"]:
+            output_name = sample["list_of_moves"][-1]
+            input_sample = {}
 
-        if len(sample["black_stones"]) > len(sample["white_stones"]):
-            input_sample["black_stones"] = sample["black_stones"][:-1]
-            input_sample["white_stones"] = sample["white_stones"]
+            if len(sample["black_stones"]) > len(sample["white_stones"]):
+                input_sample["black_stones"] = sample["black_stones"][:-1]
+                input_sample["white_stones"] = sample["white_stones"]
+            else:
+                input_sample["black_stones"] = sample["black_stones"]
+                input_sample["white_stones"] = sample["white_stones"][:-1]
+
+            x,y = name_to_coord(output_name)
+            output_board = np.zeros((9,9))
+            output_board[x,y] = 1
+            
+            output_data.append(output_board.reshape(81))
+            input_data.append(make_board(input_sample))
         else:
-            input_sample["black_stones"] = sample["black_stones"]
-            input_sample["white_stones"] = sample["white_stones"][:-1]
+            pass
+    return np.array(input_data), np.array(output_data)
 
-        x,y = name_to_coord(output_name)
-        output_board = np.zeros((9,9))
-        output_board[x,y] = 1
-        
-        output_data.append(output_board)
-        input_data.append(make_board(input_sample))
-    return input_data, output_data
-
-data = get_raw_data_go()[:1]
-input_test, output_test = create_dataset_prior(data)
-print(output_test)
-print(data)
 
 data = get_raw_data_go()
-# (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9,2)
+x, y = create_dataset_prior(data)
+
+print(len(x))
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.1)
+
+print(len(x_train),len(x_test),len(y_train),len(y_test))
+
+# (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
 
 
 ####################################
 ######### MODEL DEFINITION #########
+####################################
+def create_conv_model():
+    '''
+    Input is 9*9*2 for black and white positions
+    Output is 9*9=81 with probability distribution for the next stone
+    '''
+    model = Sequential()
+    model.add(
+        Conv2D(filters=8, kernel_size=(2,2), activation="relu", input_shape=(9, 9, 2))
+    )
+    # # model.add(MaxPooling2D(pool_size=(2,2)))
+    # model.add(
+    #     Conv2D(filters=8,kernel_size=(2,2), activation='relu')
+    #     )
+    # model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Flatten())
 
-model = Sequential()
-model.add(
-    Conv2D(filters=8, kernel_size=(3, 3), activation="relu", input_shape=(9, 9, 2))
-)
-# model.add(
-#     Conv2D(filters=8,kernel_size=(3,3), activation='relu')
-#     )
-# model.add(Dense(256))
-# model.add(Dropout(0.5))
-model.add(Flatten())
-model.add(Dense(162, activation="softmax"))
-model.add(Dense(81, activation="softmax"))
+    model.add(Dense(512, activation="relu"))
+    # model.add(Dropout(0.5))
+    model.add(Dense(256, activation="relu"))
+    model.add(Dense(81, activation="sigmoid"))
 
-# label = mettre un B et un dans une 18*[0]
+    print(model.summary())
+    return model
 
-# output -> (18,)
-# B6 -> B + 6
-# B : [0,1,2,3,] -> label [0,1,0,0,0,0,0,0,0,0,]
-# 6 -> [distribution] -> label = [0,0,0,0,0,1,0,0,0]
-# [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]
+def custom_loss(y_actual,y_pred):
+    '''
+    loss = sum(x_dist²+y_dist²) sur le top 5
+    shapes are 81*1
+    '''
+    # TO FIX : AttributeError: 'Tensor' object has no attribute 'argsort'
+    top5 = y_pred.argsort()[:5]
+    # transform en 9*9 coord pour avoir la distance
+    coords = [[arg%9,(arg-arg%9)/9] for arg in top5]
 
-# print(model.summary())
+    actual_arg = y_actual.argmax()
+    actual_coord = [actual_arg%9,(actual_arg-actual_arg%9)/9]
+    
+    custom_loss=sum((actual_coord[0]-coord[0])**2 + (actual_coord[1]-coord[1])**2 for coord in coords)
+    return custom_loss
+
+model=create_conv_model()
+model.compile(optimizer='adam',loss=custom_loss,metrics=["accuracy"])    
+print("***** Compilation is DONE *****")
+
+history = model.fit(x_train,y_train,epochs=10,verbose=2,batch_size=128,validation_split=0.1)
+print("***** Model fit is DONE *****")
+
+plot_loss_acc(history)
+_, test_acc = model.evaluate(x_test,y_test,verbose=0)
+print("Evaluation : testing accuracy = ", test_acc)
+
+# print(x_test[:1],type(x_test[:1]))
+# pred = np.array([res.argsort[:5] for res in model.predict(x_test)])
+
+pred=[]
+for res in model.predict(x_test):
+    pred.append(res.argsort()[:5])
+np.array(pred)
+
+success = np.sum(np.array([1 for i in range(len(pred)) if np.argmax(y_test[i]) in pred[i]]))
+print("Accuracy : ",success/len(x_test))
 
 
-# model.compile(optimizer='adam',loss='categorical_crossentropy',metrics=["accuracy"])
-
-# # ... A REMPLIR
-
-# model.summary()
+# print([np.argmax(model.predict([x_test[i]])) for i in range(len(y_test))])
+# print([np.argmax([y_test[i]]) for i in range(len(y_test))])
