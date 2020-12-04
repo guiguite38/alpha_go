@@ -222,6 +222,8 @@ def plot_loss_acc(history):
         title += ', Validation accuracy: {:.2f}%'.format(final_val_acc * 100)
     plt.title(title)
     plt.legend()
+def count_freedom():
+    pass
 
 # on veut make un board avec extraction préalable du dernier qui sera considéré comme un label
 def create_dataset_prior(data):
@@ -274,20 +276,98 @@ def create_conv_model():
     Output is 9*9=81 with probability distribution for the next stone
     '''
     model = Sequential()
+
     model.add(
-        Conv2D(filters=8, kernel_size=(2,2), activation="relu", input_shape=(9, 9, 2))
+        Conv2D(filters=128, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
     )
-    # # model.add(MaxPooling2D(pool_size=(2,2)))
-    # model.add(
-    #     Conv2D(filters=8,kernel_size=(2,2), activation='relu')
-    #     )
-    # model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=64, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=64, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=64, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+    model.add(
+        Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
+    )
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
+
     model.add(Flatten())
 
-    model.add(Dense(512, activation="relu"))
-    # model.add(Dropout(0.5))
-    model.add(Dense(256, activation="relu"))
-    model.add(Dense(81, activation="sigmoid"))
+    model.add(Dense(160))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+
+    model.add(Dense(160))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+
+    model.add(Dense(160))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+
+    model.add(Dense(1, activation='relu'))
 
     print(model.summary())
     return model
@@ -309,10 +389,10 @@ def custom_loss(y_actual,y_pred):
     return custom_loss
 
 model=create_conv_model()
-model.compile(optimizer='adam',loss=custom_loss,metrics=["accuracy"])    
+model.compile(optimizer='adam',loss='mse',metrics=["mae", "mse"])    
 print("***** Compilation is DONE *****")
 
-history = model.fit(x_train,y_train,epochs=10,verbose=2,batch_size=128,validation_split=0.1)
+history = model.fit(x_train,y_train,epochs=10,verbose=1,batch_size=128,validation_split=0.1)
 print("***** Model fit is DONE *****")
 
 plot_loss_acc(history)
