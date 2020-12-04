@@ -1,3 +1,7 @@
+import tensorflow as tf
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3"
+print('GPU FOUND :)' if tf.config.list_physical_devices("GPU") else 'No GPU :(')
 import numpy as np
 import tensorflow.keras
 from tensorflow.keras.models import Sequential
@@ -222,7 +226,9 @@ def plot_loss_acc(history):
         title += ', Validation accuracy: {:.2f}%'.format(final_val_acc * 100)
     plt.title(title)
     plt.legend()
+    
 def count_freedom():
+
     pass
 
 # on veut make un board avec extraction préalable du dernier qui sera considéré comme un label
@@ -377,19 +383,19 @@ def custom_loss(y_actual,y_pred):
     loss = sum(x_dist²+y_dist²) sur le top 5
     shapes are 81*1
     '''
-    # TO FIX : AttributeError: 'Tensor' object has no attribute 'argsort'
-    top5 = y_pred.argsort()[:5]
+    top5 = tf.argsort(y_pred)[:5]
     # transform en 9*9 coord pour avoir la distance
-    coords = [[arg%9,(arg-arg%9)/9] for arg in top5]
+    coords = [[arg%9,(arg-arg%9)/9] for arg in top5.numpy()]
 
-    actual_arg = y_actual.argmax()
+    actual_arg = tf.argmax(y_actual)
     actual_coord = [actual_arg%9,(actual_arg-actual_arg%9)/9]
     
+    #TO FIX : "InvalidArgumentError: cannot compute AddV2 as input #1(zero-based) was expected to be a int64 tensor but is a double tensor [Op:AddV2]"
     custom_loss=sum((actual_coord[0]-coord[0])**2 + (actual_coord[1]-coord[1])**2 for coord in coords)
     return custom_loss
 
 model=create_conv_model()
-model.compile(optimizer='adam',loss='mse',metrics=["mae", "mse"])    
+model.compile(optimizer='adam',loss="mse",metrics=["mae", "mse"], run_eagerly=True)    
 print("***** Compilation is DONE *****")
 
 history = model.fit(x_train,y_train,epochs=10,verbose=1,batch_size=128,validation_split=0.1)
