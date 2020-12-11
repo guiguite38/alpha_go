@@ -430,14 +430,9 @@ if __name__ =="__main__":
         y_test, y_pred
     )
 
-
     # print(x_test[:1],type(x_test[:1]))
     # pred = np.array([res.argsort[:5] for res in model.predict(x_test)])
 
-    pred=[]
-    for res in model.predict(x_test):
-        pred.append(res.argsort()[:5])
-    np.array(pred)
 
     success = np.sum(np.array([1 for i in range(len(pred)) if np.argmax(y_test[i]) in pred[i]]))
     print("Accuracy : ",success/len(x_test))
