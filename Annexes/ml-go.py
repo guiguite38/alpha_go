@@ -231,7 +231,25 @@ def count_freedom():
 
     pass
 
+def create_dataset_victory(data):
+    input_data = []
+    output_data = []
+    for sample in data:
+        if "PASS" not in sample["list_of_moves"]:
+            output_name = sample["list_of_moves"][-1]
+            input_sample = {}
+            input_sample["black_stones"] = sample["black_stones"][:-1]
+            input_sample["white_stones"] = sample["white_stones"]
+
+            input_data.append(make_board(input_sample))
+            output_data.append(sample["black_wins"]/sample["rollouts"])
+        else:
+            pass
+    return np.array(input_data), np.array(output_data)
+
 # on veut make un board avec extraction préalable du dernier qui sera considéré comme un label
+
+
 def create_dataset_prior(data):
     """
     Takes list of moves as an input and returns [data,label]
@@ -262,25 +280,19 @@ def create_dataset_prior(data):
     return np.array(input_data), np.array(output_data)
 
 
-data = get_raw_data_go()
-x, y = create_dataset_prior(data)
-
-print(len(x))
-x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.1)
-
-print(len(x_train),len(x_test),len(y_train),len(y_test))
-
-# (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
 
 
 ####################################
 ######### MODEL DEFINITION #########
 ####################################
-def create_conv_model():
+def create_model(**kwargs):
     '''
     Input is 9*9*2 for black and white positions
-    Output is 9*9=81 with probability distribution for the next stone
+    Output is 1 with probability of player victory
+    13 couches de convolution into 3 couches denses
     '''
+    prior=kwargs.get("prior",True)
+
     model = Sequential()
 
     model.add(
@@ -289,72 +301,49 @@ def create_conv_model():
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=64, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=64, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=64, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=32, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(
-        Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
+    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-
 
     model.add(Flatten())
 
@@ -373,49 +362,86 @@ def create_conv_model():
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
 
-    model.add(Dense(1, activation='relu'))
+    if prior:
+        # Stone prediction model
+        model.add(Dense(81, activation='sigmoid'))
+    else:        
+        # Victory prediction model
+        model.add(Dense(1, activation='relu'))
 
     print(model.summary())
     return model
 
-def custom_loss(y_actual,y_pred):
+
+def custom_loss_obsolete(y_actual,y_pred):
     '''
     loss = sum(x_dist²+y_dist²) sur le top 5
     shapes are 81*1
+    y_actual is 81*zeroes with 1 on the coord where the stone should be placed
+    y_pred is distribution of probabilities
     '''
-    top5 = tf.argsort(y_pred)[:5]
+    np_y_pred=np.array(y_pred)
+    np_y_actual=np.array(y_actual)
+    # print(f"[custom_loss] y_pred : {np_y_pred} - of type {type(np_y_pred)}")
+    # print(f"[custom_loss] y_actual : {np_y_actual} - of type {type(np_y_actual)}")
+    top5 = np.argsort(np_y_pred)[:5]
+    print(f"[custom_loss] top5 : {top5}")
     # transform en 9*9 coord pour avoir la distance
-    coords = [[arg%9,(arg-arg%9)/9] for arg in top5.numpy()]
+    coords = [[arg%9,(arg-arg%9)/9] for arg in top5]
+    print(f"[custom_loss] coords : {coords}")
 
-    actual_arg = tf.argmax(y_actual)
+    actual_arg = np.argmax(np_y_actual)
     actual_coord = [actual_arg%9,(actual_arg-actual_arg%9)/9]
-    
-    #TO FIX : "InvalidArgumentError: cannot compute AddV2 as input #1(zero-based) was expected to be a int64 tensor but is a double tensor [Op:AddV2]"
+    print(f"[custom_loss] actual_coord : {actual_coord}")
+
     custom_loss=sum((actual_coord[0]-coord[0])**2 + (actual_coord[1]-coord[1])**2 for coord in coords)
+    print(f"[custom_loss] computed custom_loss : {custom_loss}")    
     return custom_loss
 
-model=create_conv_model()
-model.compile(optimizer='adam',loss="mse",metrics=["mae", "mse"], run_eagerly=True)    
-print("***** Compilation is DONE *****")
 
-history = model.fit(x_train,y_train,epochs=10,verbose=1,batch_size=128,validation_split=0.1)
-print("***** Model fit is DONE *****")
+if __name__ =="__main__":
+    data = get_raw_data_go()
+    x, y = create_dataset_prior(data)
 
-plot_loss_acc(history)
-_, test_acc = model.evaluate(x_test,y_test,verbose=0)
-print("Evaluation : testing accuracy = ", test_acc)
+    print(len(x))
+    x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.1)
 
-# print(x_test[:1],type(x_test[:1]))
-# pred = np.array([res.argsort[:5] for res in model.predict(x_test)])
+    print(len(x_train),len(x_test),len(y_train),len(y_test))
 
-pred=[]
-for res in model.predict(x_test):
-    pred.append(res.argsort()[:5])
-np.array(pred)
+    # (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
 
-success = np.sum(np.array([1 for i in range(len(pred)) if np.argmax(y_test[i]) in pred[i]]))
-print("Accuracy : ",success/len(x_test))
+    model=create_model(prior=True)
+    model.compile(optimizer='adam',loss="mse",metrics=["mae", "mse"], run_eagerly=True)    
+    print("***** Compilation is DONE *****")
+
+    history = model.fit(x_train,y_train,epochs=10,verbose=1,batch_size=128,validation_split=0.1)
+    print("***** Model fit is DONE *****")
+
+    plot_loss_acc(history)
+    _, test_acc = model.evaluate(x_test,y_test,verbose=0)
+    print("Evaluation : testing accuracy = ", test_acc)
+
+    # Eval model on test data
+    print("Evaluate on test data")
+    results = model.evaluate(x_test, y_test, batch_size=128)
+    print("test loss, test acc:", results)
+    y_pred = model.predict(x_test)
+    tf.keras.losses.MAE(
+        y_test, y_pred
+    )
 
 
-# print([np.argmax(model.predict([x_test[i]])) for i in range(len(y_test))])
-# print([np.argmax([y_test[i]]) for i in range(len(y_test))])
+    # print(x_test[:1],type(x_test[:1]))
+    # pred = np.array([res.argsort[:5] for res in model.predict(x_test)])
+
+    pred=[]
+    for res in model.predict(x_test):
+        pred.append(res.argsort()[:5])
+    np.array(pred)
+
+    success = np.sum(np.array([1 for i in range(len(pred)) if np.argmax(y_test[i]) in pred[i]]))
+    print("Accuracy : ",success/len(x_test))
+
+
+    # print([np.argmax(model.predict([x_test[i]])) for i in range(len(y_test))])
+    # print([np.argmax([y_test[i]]) for i in range(len(y_test))])
