@@ -25,6 +25,9 @@ class myPlayer(PlayerInterface):
         )  # !! slow, to be replaced --> faire un lazyloading en attendant
         self._heuristic = scores[abs(self._mycolor)] - scores[abs(self._mycolor - 1)]
 
+        self.model_victory = model.lazyloading("./models/model_victory")
+        slef.model_prior = model.lazyloading("./models/model_prior")
+
     def getPlayerName(self):
         return "Random Player"
 

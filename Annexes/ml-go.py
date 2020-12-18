@@ -228,7 +228,6 @@ def plot_loss_acc(history):
     plt.legend()
     
 def count_freedom():
-
     pass
 
 def create_dataset_victory(data):
@@ -289,7 +288,7 @@ def create_model(**kwargs):
     '''
     Input is 9*9*2 for black and white positions
     Output is 1 with probability of player victory
-    13 couches de convolution into 3 couches denses
+    13 convolution layers  into 3 dense
     '''
     prior=kwargs.get("prior",True)
 
@@ -369,7 +368,7 @@ def create_model(**kwargs):
         # Victory prediction model
         model.add(Dense(1, activation='relu'))
 
-    print(model.summary())
+    # print(model.summary())
     return model
 
 
@@ -395,36 +394,30 @@ def custom_loss_obsolete(y_actual,y_pred):
     print(f"[custom_loss] actual_coord : {actual_coord}")
 
     custom_loss=sum((actual_coord[0]-coord[0])**2 + (actual_coord[1]-coord[1])**2 for coord in coords)
-    print(f"[custom_loss] computed custom_loss : {custom_loss}")    
+    print(f"[custom_loss] computed custom_loss : {custom_loss}")
     return custom_loss
 
 
-if __name__ =="__main__":
-    data = get_raw_data_go()
-    x, y = create_dataset_prior(data)
-
-    print(len(x))
-    x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.1)
-
-    print(len(x_train),len(x_test),len(y_train),len(y_test))
-
-    # (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
-
-    model=create_model(prior=True)
-    model.compile(optimizer='adam',loss="mse",metrics=["mae", "mse"], run_eagerly=True)    
+def train_model(x_train,y_train,model):
+    model.compile(optimizer='adam',loss="mse",metrics=["mae", "mse","accuracy"], run_eagerly=True)    
     print("***** Compilation is DONE *****")
 
     history = model.fit(x_train,y_train,epochs=10,verbose=1,batch_size=128,validation_split=0.1)
     print("***** Model fit is DONE *****")
+    return history
 
+
+def test_model(x_test, y_test, history, model):
     plot_loss_acc(history)
-    _, test_acc = model.evaluate(x_test,y_test,verbose=0)
+
+    print(f"[model.evaluate] : {model.evaluate(x_test,y_test,verbose=0)}")
+    loss, mae, mse, test_acc = model.evaluate(x_test,y_test,verbose=0)
     print("Evaluation : testing accuracy = ", test_acc)
 
     # Eval model on test data
     print("Evaluate on test data")
     results = model.evaluate(x_test, y_test, batch_size=128)
-    print("test loss, test acc:", results)
+    print("loss, mae, mse, test_acc :", results)
     y_pred = model.predict(x_test)
     tf.keras.losses.MAE(
         y_test, y_pred
@@ -433,10 +426,35 @@ if __name__ =="__main__":
     # print(x_test[:1],type(x_test[:1]))
     # pred = np.array([res.argsort[:5] for res in model.predict(x_test)])
 
-
-    success = np.sum(np.array([1 for i in range(len(pred)) if np.argmax(y_test[i]) in pred[i]]))
+    # TODO use custom function to determine wether results are acceptable or not
+    success = np.sum(np.array([1 for i in range(len(y_pred)) if np.max(y_test[i]) in y_pred[i]]))
     print("Accuracy : ",success/len(x_test))
-
 
     # print([np.argmax(model.predict([x_test[i]])) for i in range(len(y_test))])
     # print([np.argmax([y_test[i]]) for i in range(len(y_test))])
+    
+
+
+if __name__ =="__main__":
+    data = get_raw_data_go()
+    x_prior, y_prior = create_dataset_prior(data)
+    x_victory, y_victory = create_dataset_victory(data)
+
+    x_train_p,x_test_p,y_train_p,y_test_p = train_test_split(x_prior,y_prior,test_size=0.1)
+    x_train_v,x_test_v,y_train_v,y_test_v = train_test_split(x_victory,y_victory,test_size=0.1)
+
+    # print(len(x_train),len(x_test),len(y_train),len(y_test))
+
+    # (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
+
+    model_prior=create_model(prior=True)
+    history_prior = train_model(x_train_p, y_train_p, model_prior)
+    test_model(x_test_p, y_test_p, history_prior, model_prior)
+    model_prior.save_weights("./models/model_prior/")
+
+    model_victory=create_model(prior=False)
+    history_victory = train_model(x_victory, y_victory,model_victory)
+    test_model(x_test_v, y_test_v, history_victory, model_victory)
+    model_victory.save_weights("./models/model_victory/")
+
+
