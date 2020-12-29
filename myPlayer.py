@@ -22,11 +22,8 @@ class myPlayer(PlayerInterface):
         self._mycolor = None
         score = (
             self._board.Goban.compute_score()
-        )  # !! slow, to be replaced --> faire un lazyloading en attendant
+        )  # !! slow, to be replaced
         self._heuristic = scores[abs(self._mycolor)] - scores[abs(self._mycolor - 1)]
-
-        self.model_victory = model.lazyloading("./models/model_victory")
-        slef.model_prior = model.lazyloading("./models/model_prior")
 
     def getPlayerName(self):
         return "Random Player"

@@ -254,6 +254,10 @@ def create_dataset_prior(data):
     Takes list of moves as an input and returns [data,label]
     with label = last move 
     """
+    # TODO : PLAYER TURN DOESNT DEPEND ON NB OF STONE IN HIS COLOR -> stones can be taken !
+    # representation is wrong : cells where stone should be lost are marked as occupied
+    # -> once corrected, redo whole training
+
     input_data = []
     output_data = []
     for sample in data:
@@ -447,14 +451,26 @@ if __name__ =="__main__":
 
     # (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
 
-    model_prior=create_model(prior=True)
-    history_prior = train_model(x_train_p, y_train_p, model_prior)
-    test_model(x_test_p, y_test_p, history_prior, model_prior)
-    model_prior.save_weights("./models/model_prior/")
+    # Model creation and training
+    # model_prior=create_model(prior=True)
+    # history_prior = train_model(x_train_p, y_train_p, model_prior)
+    # test_model(x_test_p, y_test_p, history_prior, model_prior)
+    # model_prior.save_weights("./models/model_prior/")
 
-    model_victory=create_model(prior=False)
-    history_victory = train_model(x_victory, y_victory,model_victory)
-    test_model(x_test_v, y_test_v, history_victory, model_victory)
-    model_victory.save_weights("./models/model_victory/")
+    # model_victory=create_model(prior=False)
+    # history_victory = train_model(x_victory, y_victory,model_victory)
+    # test_model(x_test_v, y_test_v, history_victory, model_victory)
+    # model_victory.save_weights("./models/model_victory/")
+    
+    # Model Loading
+    # model_victory=create_model(prior=False)
+    # model_victory.load_weights("./models/model_victory/")
+    # prob_victory = model_victory.predict(np.array([x_test_v[0]]))
+
+    model_prior=create_model(prior=True)
+    model_prior.load_weights("./models/model_prior/")
+    prob_prior = model_prior.predict(np.array([x_test_p[0]]))
+    print(prob_prior.shape)
+    
 
 
