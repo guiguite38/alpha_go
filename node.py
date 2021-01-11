@@ -5,101 +5,9 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3"
 print('GPU FOUND :)' if tf.config.list_physical_devices("GPU") else 'No GPU :(')
 import numpy as np
-import tensorflow.keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
-from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D
-import tensorflow.keras.optimizers as optimizers
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import tensorflow.keras.backend as kb
-
-def create_model(**kwargs):
-    '''
-    Input is 9*9*2 for black and white positions
-    Output is 1 with probability of player victory
-    13 convolution layers  into 3 dense
-    '''
-    prior=kwargs.get("prior",True)
-
-    model = Sequential()
-
-    model.add(
-        Conv2D(filters=128, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2))
-    )
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Conv2D(filters=16, kernel_size=(3,3), padding='same', data_format="channels_last", input_shape=(9, 9, 2)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Flatten())
-
-    model.add(Dense(160))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-
-    model.add(Dense(160))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-
-    model.add(Dense(160))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-
-    if prior:
-        # Stone prediction model
-        model.add(Dense(81, activation='sigmoid'))
-    else:        
-        # Victory prediction model
-        model.add(Dense(1, activation='relu'))
-
-    # print(model.summary())
-    return model
+import math
+from Goban import Board
+from Annexes.ml_go import create_model, name_to_coord, make_board
 
 
 class node():
@@ -110,11 +18,12 @@ class node():
     _MODEL_VICTORY = None
     _MODEL_PLAY_STONE = None
 
-    def __init__(self, father, board):
+    def __init__(self, father, board, gnugo_board):
         self.nb_child_wins = 0
         self.nb_child_visit = 0
-        self.c = sqrt(2) # empirically the best value
+        self.c = math.sqrt(2) # empirically the best value (?????)
         self.board = board
+        self.gnugo_board = gnugo_board
         self.A = node.get_victory(board) # s is predicted proba of victory / then sum(A_children) / visits
         self.father=father #needed for rollback
         self.children = []
@@ -153,36 +62,83 @@ class node():
         #     tmp_board=[black_stones, white_stones]
         # else:
         tmp_board = self.board.copy()
+
+        # check legal moves
+        child_gnugo_board=self.gnugo_board.copy()
+        legal_moves = self.gnugo_board.legal_move()
+        
+        # convert playable coords to board
+        board_legal_moves = np.zeros((9, 9), dtype=bool)
+        for move in legal_moves:
+            x,y = name_to_coord(move)
+            board_legal_moves[x,y] = 1
         
         # TODO: here it would be wise to use gnugoban -> forbidden moves ! mama mia...
         for i,line in enumerate(tmp_board[player_turn]):
-            for j,cell in enumerate(line):
-                if cell == 0: # should be 'if legal_move'
+            for j,_ in enumerate(line):
+                if board_legal_moves[i,j] == 1: # explore legal_move
+                    # make move on local board
                     child_board = tmp_board.copy()
                     child_board[i,j] = 1
-                    self.children.append(node(self,child_board))
+
+                    # push on gnugo_board
+                    child_gnugo_board.push(Board.coord_to_name((i,j)))
+
+                    child = node(self,child_board,child_gnugo_board)
+                    self.children.append(child)
+    
+    def rollback(self, victory):
+        """
+        parameters :
+            victory is the boolean output from rollout
+        """
+        # here we need to update every parameter using the rollout ouput 
+        self.nb_child_wins += victory
+        self.nb_child_visit += 1
+        self.A = np.sum([child.A for child in self.children]) / self.nb_child_visit # proba of victory is sum(A_children) / visits
 
     def rollout(self):
         """Play according to model_stone until the end
         returns result"""
         
-        #TODO -> play recursively + get final score
-        prediction = get_play_stone(self.board)
-        index_best = np.argmax(prediction[0])
+        # make prediction for every slot
+        prediction = node.get_play_stone(self.board)
+
+        # check legal moves
+        child_gnugo_board=self.gnugo_board.copy()
+        legal_moves = self.gnugo_board.legal_move()
+        
+        # convert playable coords to board
+        board_legal_moves = np.zeros((9, 9), dtype=bool)
+        
+        for move in legal_moves:
+            x,y = name_to_coord(move)
+            board_legal_moves[x,y] = 1        
+
+        # combine predictions with legal moves
+        legal_predict = prediction[0]*board_legal_moves
+
+        # take best and push
+        index_best = np.argmax(legal_predict)
         x = index_best % 9 # !!should be board_size
         y = index_best // 9 # !!should be board_size
         child_board = self.board.copy()
-        child_board[x,y] = 1
-        child = node(self,child_board)
+        child_board[0][x,y] = 1
+        child_gnugo_board.push(Board.coord_to_name((x,y)))
+
+        child = node(self,child_board,child_gnugo_board)
         self.children.append(child)
         
-        # TODO define end -> connect with gnugoban
-        game_over=False
+        # continue rollouts while not game_over
+        game_over=self.gnugo_board.is_game_over()        
         if not game_over:
-            return child.rollout()
+            return not child.rollout()
         else:
-            # TODO : implement return child.has_won?
-            raise NotImplementedError("We're screwed. (whether child has one)")
+            result = self.gnugo_board.result()
+            if result == "1/2-1/2":
+                # TODO : handle draw
+                raise(NotImplementedError("can't handle draw"))
+            return result == "0-1" # black wins if True
     
 
 
