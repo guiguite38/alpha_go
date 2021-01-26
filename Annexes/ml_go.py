@@ -117,7 +117,9 @@ def name_to_coord(s):
     Prends en entrée une unique coord sous forme de chaine de caratères A2
     Retourne une paire d'entiers représentant la coordonnée
     """
-    assert s != "PASS"
+    if s == "PASS":
+        return [-1,-1]
+    
     indexLetters = {
         "A": 0,
         "B": 1,

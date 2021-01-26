@@ -9,6 +9,7 @@ import time
 import Goban
 from random import choice
 from playerInterface import *
+from mcts import mcts
 
 
 class myPlayer(PlayerInterface):
@@ -26,25 +27,27 @@ class myPlayer(PlayerInterface):
         self._heuristic = scores[abs(self._mycolor)] - scores[abs(self._mycolor - 1)]
 
     def getPlayerName(self):
-        return "Random Player"
+        return "Supposedl smart Player"
 
     def getPlayerMove(self):
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
-        moves = self._board.legal_moves()  # Dont use weak_legal_moves() here!
+        # moves = self._board.legal_moves()  # Dont use weak_legal_moves() here!
+        # move = choice(moves)  # random choice
+        
+        print(f"[myPLayer.getPlayerMove] goban_board {self._board.black}")
 
-        # TODO
-        # remplacer par le maximum de w/n + c *np.sqrt(ln(N)/n)
-        # w = nb wins by successor
-        # n = nb visits of successor
-        # c = sqrt(2)
-        # N = nb visits of father node
+        #################### H E R E ##########################
+        # black_stones': ['B7', 'C6', 'E5', 'C3']
+        # TODO : transform string representation of table with the above representation
+        #######################################################
+        
+        black_stones = []
+        white_stones = []
 
-        # prior --> Rollout
-        # value --> scoring system
+        move = mcts.chose_best_action(black_stones = [], white_stones=[]) 
 
-        move = choice(moves)  # random choice
         self._board.push(move)
 
         # New here: allows to consider internal representations of moves
