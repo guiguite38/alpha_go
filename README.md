@@ -1,7 +1,51 @@
-# alpha_go
-Project aiming at reproducing the AlphaGo algorithm.
+# Projet d'Intelligence Artificielle AlphaGO
+### Mené à contribution égales par G. Grosse, M. Mahaut, B. Nicol
 
-Goban.py 
+## PROBLEMATIQUE
+Mettre en place un algorithme de type Monte Carlo Tree Search - MCTS - renforcé par du machine learning pour jouer au Go.
+
+## CONTEXTE
+Projet : Projet Applicatif AlphaGo
+Spécialité de filière : Intelligence Artificielle
+Ecoles d'ingénieurs associées : ENSC et ENSEIRB  
+Durée : 3 mois
+
+## PREMIERS PAS / EXECUTION
+Executer -- localGame.py --
+
+## CONTENU DU PROJET / PLUS-VALUE APPORTEE
+
+mcts.py
+-------
+Makes a Monte-Carlo Tree Search on a given board, so as to return the best move.
+
+myPlayer.py
+-----------
+Player relying on mcts predictions.
+
+node.py
+-------
+Class used for mcts computations : explorations, rollouts, rollbacks.
+
+Annexes.ml_go.py
+----------------
+Different tools to define, train and interact with models.
+
+
+## Pistes d'amélioration :
+    Le programme peut être rendu plus intelligent en modifiant ces trois éléments : 
+        -   Le temps d'exploration de l'arbre : soit en donnant plus de 10s de temps de calcul (peu agréable pour l'utilisateur), soit en accélerant l'exploration de l'arbre. Notamment, nous effectuons à chaque nouveau noeud de l'arbre une copie complète de l'objet gnugoboard, alors que les fonctions push et pull existent pour justement éviter cela.
+
+        -   La qualité du rollout :i.e. sur un même temps de calcul des explorations plus intéressantes. Pour cela, la génération de nouvelles données en self play permettrait de retravailler ce modèle. Une augmentation experte des données, comme l'ajout du nombre de libertés pour chaque pierre peut aussi être envisagée.
+
+        - La qualité du value network : pourrait lui aussi bénéficier de nouvelles données améliorant la qualité du modèle. 
+
+    Dans la continuation de ce projet, une fois ce travail sur l'intelligence terminé, nous aurions pu tenter d'agrandir le plateau à 13*13, voir à un 19*19.
+
+
+## Fichiers pré-existants
+
+Goban.py
 ---------
 
 Fichier contenant les règles du jeu de GO avec les fonctions et méthodes pour parcourir (relativement) efficacement

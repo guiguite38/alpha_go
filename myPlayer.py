@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-""" This is the file you have to modify for the tournament. Your default AI player must be called by this module, in the
-myPlayer class.
-
-Right now, this class contains the copy of the randomPlayer. But you have to change this!
+""" This is the file you have to modify for the tournament.
+Your default AI player must be called by this module, in the myPlayer class.
 """
 
 import time
@@ -13,58 +11,47 @@ from mcts import mcts
 
 
 class myPlayer(PlayerInterface):
-    """ Example of a random player for the go. The only tricky part is to be able to handle
-    the internal representation of moves given by legal_moves() and used by push() and 
-    to translate them to the GO-move strings "A1", ..., "J8", "PASS". Easy!
+    """
+    Player relying on mcts predictions.
     """
 
     def __init__(self):
-        self._board = Goban.Board()
+        self._goban_board = Goban.Board()
         self._mycolor = None
-        score = (
-            self._board.Goban.compute_score()
-        )  # !! slow, to be replaced
-        self._heuristic = scores[abs(self._mycolor)] - scores[abs(self._mycolor - 1)]
+
 
     def getPlayerName(self):
-        return "Supposedl smart Player"
+        return "Hopefully-smarter-than-random Player"
+
 
     def getPlayerMove(self):
-        if self._board.is_game_over():
+        if self._goban_board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
-        # moves = self._board.legal_moves()  # Dont use weak_legal_moves() here!
-        # move = choice(moves)  # random choice
-        
-        print(f"[myPLayer.getPlayerMove] goban_board {self._board.black}")
+            
+        black_indexes = [i for i,x in enumerate(self._goban_board._board) if x==1]
+        white_indexes = [i for i,x in enumerate(self._goban_board._board) if x==2]
 
-        #################### H E R E ##########################
-        # black_stones': ['B7', 'C6', 'E5', 'C3']
-        # TODO : transform string representation of table with the above representation
-        #######################################################
-        
-        black_stones = []
-        white_stones = []
+        black_stones = [Goban.Board.flat_to_name(i) for i in black_indexes]
+        white_stones = [Goban.Board.flat_to_name(i) for i in white_indexes]
 
-        move = mcts.chose_best_action(black_stones = [], white_stones=[]) 
+        my_mcts = mcts()
+        move = my_mcts.chose_best_action(black_stones = black_stones, white_stones=white_stones,gnugo_board=self._goban_board) 
 
-        self._board.push(move)
+        self._goban_board.push(move)
 
-        # New here: allows to consider internal representations of moves
-        print("I am playing ", self._board.move_to_str(move))
-        print("My current board :")
-        self._board.prettyPrint()
-        # move is an internal representation. To communicate with the interface I need to change if to a string
         return Goban.Board.flat_to_name(move)
 
+
     def playOpponentMove(self, move):
-        print("Opponent played ", move)  # New here
-        #  the board needs an internal represetation to push the move.  Not a string
-        self._board.push(Goban.Board.name_to_flat(move))
+        print("Opponent played ", move)
+        self._goban_board.push(Goban.Board.name_to_flat(move))
+
 
     def newGame(self, color):
         self._mycolor = color
         self._opponent = Goban.Board.flip(color)
+
 
     def endGame(self, winner):
         if self._mycolor == winner:

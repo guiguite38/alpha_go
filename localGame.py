@@ -1,4 +1,3 @@
-''''''
 import Goban 
 import myPlayer
 import time

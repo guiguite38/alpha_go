@@ -1,20 +1,21 @@
+# -*- coding: utf-8 -*-
+""" Different tools to define, train and interact with models. """
+
 import tensorflow as tf
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3"
-print('GPU FOUND :)' if tf.config.list_physical_devices("GPU") else 'No GPU :(')
 import numpy as np
-import tensorflow.keras
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
-from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D
-import tensorflow.keras.optimizers as optimizers
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+import tensorflow.keras
 import tensorflow.keras.backend as kb
+import tensorflow.keras.optimizers as optimizers
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, BatchNormalization, MaxPooling2D
+from sklearn.model_selection import train_test_split
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3" # Prepared for calculus infrastructure by CATIE
+print('GPU FOUND :)' if tf.config.list_physical_devices("GPU") else 'No GPU :(')
 
 
 ## LECTURE DES DONNEES
-
 
 def get_raw_data_go():
     """ Returns the set of samples from the local file or download it if it does not exists"""
@@ -39,7 +40,6 @@ def get_raw_data_go():
 
 
 ## COMPREHENSION DES DONNEES
-
 
 def summary_of_example(data, sample_nb):
     """ Gives you some insights about a sample number"""
@@ -82,34 +82,7 @@ def summary_of_example(data, sample_nb):
     )
 
 
-## DONNEES EN ENTREE ET SORTIE DU MODELE
-
-
-def position_predict(black_stones, white_stones):
-
-    # ... Votre tambouille interne pour placer les pierres comme il faut dans votre structure de données
-    # et appeler votre modèle Keras (typiquement avec model.predict())
-    prediction = None  # model.predict(...) # A REMPLIR CORRECTEMENT
-
-    return prediction
-
-
-# Ainsi, pour le rendu, en admettant que newdata soit le fichier json contenant les nouvelles données que
-# l'on vous donnera 24h avant la fin, vous pourrez construire le fichier resultat ainsi
-
-
-def create_result_file(newdata):
-    """ Exemple de méthode permettant de générer le fichier de resultats demandés. """
-    resultat = [position_predict(d["black_stones"], d["white_stones"]) for d in newdata]
-    with open("my_predictions.txt", "w") as f:
-        for p in resultat:
-            f.write(str(p) + "\n")
-
-
-######################################################
-######################################################
-
-# First steps: transform all the data into numpy arrays to feed your neural network
+## TRANSFORM DATA TO FEED OUR NEURAL NETWORK
 
 
 def name_to_coord(s):
@@ -144,9 +117,6 @@ def make_board(sample):
     """
     board = np.zeros((9, 9, 2), dtype=bool)
 
-    # print(sample["white_stones"])
-    # print(sample["black_stones"])
-
     for white_stone in sample["white_stones"]:
         x, y = name_to_coord(white_stone)
         board[x, y, 0] = True
@@ -157,41 +127,9 @@ def make_board(sample):
     return board
 
 
-# white stones at the following position ['C8', 'E7', 'H7', 'G3']
-# black stones at the following position ['B7', 'C6', 'E5', 'C3']
+## BUILD AND TRAIN NEURAL NETWORK
 
-
-# if name == "__main__":
-# Test of board making
-# rval = np.random.randint(0,)
-# board = make_board(data[10])
-# print(board.shape)
-# print(board[1, 6, 1])
-
-# print(board.T[0])
-# print(board.T[1])
-
-# print("We have", len(data),"examples")
-# # summary_of_example(data,10)
-# # Par exemple, nous pourrons appeler votre prédiction ainsi
-
-# print("Prediction this sample:")
-# summary_of_example(data, 10)
-# print()
-# prediction = position_predict(data[10]["black_stones"], data[10]["white_stones"])
-# print("You predicted", prediction, "and the actual target was", data[10]["black_wins"]/data[10]["rollouts"])
-
-
-######################################################
-######################################################
-
-# Second steps: build your neural network and train it
-
-# on fait le rollout
-# pour l'améliorer on veut jouer des coups probables pour accélérer le roll out
-# donc on veut la proba de jouer un coup à partir d'un plateau donné
-
-# fonction utilitaire pour visualisation de l'entraînement (cours bpesquet)
+# tool for visualisation training (bpesquet.fr/mlkatas)
 def plot_loss_acc(history):
     """Plot training and (optionally) validation loss and accuracy"""
 
@@ -228,11 +166,12 @@ def plot_loss_acc(history):
         title += ', Validation accuracy: {:.2f}%'.format(final_val_acc * 100)
     plt.title(title)
     plt.legend()
-    
-def count_freedom():
-    pass
+
 
 def create_dataset_victory(data):
+    """
+    Preprocess data to train the victory network
+    """
     input_data = []
     output_data = []
     for sample in data:
@@ -248,18 +187,13 @@ def create_dataset_victory(data):
             pass
     return np.array(input_data), np.array(output_data)
 
-# on veut make un board avec extraction préalable du dernier qui sera considéré comme un label
-
 
 def create_dataset_prior(data):
     """
+    Preprocess data to train the rollout network
     Takes list of moves as an input and returns [data,label]
-    with label = last move 
+    with label = last move
     """
-    # TODO : PLAYER TURN DOESNT DEPEND ON NB OF STONE IN HIS COLOR -> stones can be taken !
-    # representation is wrong : cells where stone should be lost are marked as occupied
-    # -> once corrected, redo whole training
-
     input_data = []
     output_data = []
     for sample in data:
@@ -285,15 +219,15 @@ def create_dataset_prior(data):
     return np.array(input_data), np.array(output_data)
 
 
+## MODEL DEFINITION
 
 
-####################################
-######### MODEL DEFINITION #########
-####################################
 def create_model(**kwargs):
     '''
     Input is 9*9*2 for black and white positions
-    Output is 1 with probability of player victory
+    Output is :
+    - 1 with probability of player victory
+    - or 81 with probability of victory for each square (enable stone placement)
     13 convolution layers  into 3 dense
     '''
     prior=kwargs.get("prior",True)
@@ -373,35 +307,8 @@ def create_model(**kwargs):
     else:        
         # Victory prediction model
         model.add(Dense(1, activation='relu'))
-
-    # print(model.summary())
     return model
 
-
-def custom_loss_obsolete(y_actual,y_pred):
-    '''
-    loss = sum(x_dist²+y_dist²) sur le top 5
-    shapes are 81*1
-    y_actual is 81*zeroes with 1 on the coord where the stone should be placed
-    y_pred is distribution of probabilities
-    '''
-    np_y_pred=np.array(y_pred)
-    np_y_actual=np.array(y_actual)
-    # print(f"[custom_loss] y_pred : {np_y_pred} - of type {type(np_y_pred)}")
-    # print(f"[custom_loss] y_actual : {np_y_actual} - of type {type(np_y_actual)}")
-    top5 = np.argsort(np_y_pred)[:5]
-    print(f"[custom_loss] top5 : {top5}")
-    # transform en 9*9 coord pour avoir la distance
-    coords = [[arg%9,(arg-arg%9)/9] for arg in top5]
-    print(f"[custom_loss] coords : {coords}")
-
-    actual_arg = np.argmax(np_y_actual)
-    actual_coord = [actual_arg%9,(actual_arg-actual_arg%9)/9]
-    print(f"[custom_loss] actual_coord : {actual_coord}")
-
-    custom_loss=sum((actual_coord[0]-coord[0])**2 + (actual_coord[1]-coord[1])**2 for coord in coords)
-    print(f"[custom_loss] computed custom_loss : {custom_loss}")
-    return custom_loss
 
 
 def train_model(x_train,y_train,model):
@@ -429,16 +336,34 @@ def test_model(x_test, y_test, history, model):
         y_test, y_pred
     )
 
-    # print(x_test[:1],type(x_test[:1]))
-    # pred = np.array([res.argsort[:5] for res in model.predict(x_test)])
-
-    # TODO use custom function to determine wether results are acceptable or not
+    # TODO use custom loss function (BELOW) to determine wether results are acceptable or not
     success = np.sum(np.array([1 for i in range(len(y_pred)) if np.max(y_test[i]) in y_pred[i]]))
     print("Accuracy : ",success/len(x_test))
 
-    # print([np.argmax(model.predict([x_test[i]])) for i in range(len(y_test))])
-    # print([np.argmax([y_test[i]]) for i in range(len(y_test))])
+
+def custom_loss_obsolete(y_actual,y_pred):
+    '''
+    loss = sum(x_dist²+y_dist²) sur le top 5
+    shapes are 81*1
+    y_actual is 81*zeroes with 1 on the coord where the stone should be placed
+    y_pred is distribution of probabilities
+    '''
+    np_y_pred=np.array(y_pred)
+    np_y_actual=np.array(y_actual)
+    top5 = np.argsort(np_y_pred)[:5]
+    print(f"[custom_loss] top5 : {top5}")
     
+    # transform en 9*9 coord pour avoir la distance
+    coords = [[arg%9,(arg-arg%9)/9] for arg in top5]
+    print(f"[custom_loss] coords : {coords}")
+
+    actual_arg = np.argmax(np_y_actual)
+    actual_coord = [actual_arg%9,(actual_arg-actual_arg%9)/9]
+    print(f"[custom_loss] actual_coord : {actual_coord}")
+
+    custom_loss=sum((actual_coord[0]-coord[0])**2 + (actual_coord[1]-coord[1])**2 for coord in coords)
+    print(f"[custom_loss] computed custom_loss : {custom_loss}")
+    return custom_loss
 
 
 if __name__ =="__main__":
@@ -449,9 +374,10 @@ if __name__ =="__main__":
     x_train_p,x_test_p,y_train_p,y_test_p = train_test_split(x_prior,y_prior,test_size=0.1)
     x_train_v,x_test_v,y_train_v,y_test_v = train_test_split(x_victory,y_victory,test_size=0.1)
 
+    ## UNCOMMENT TO TEST ##
     # print(len(x_train),len(x_test),len(y_train),len(y_test))
 
-    # (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
+    ## (9,9,2) -> conv2D -> conv2D -> sigmoid(Dense) -> (9,9)
 
     # Model creation and training
     # model_prior=create_model(prior=True)
@@ -474,5 +400,6 @@ if __name__ =="__main__":
     prob_prior = model_prior.predict(np.array([x_test_p[0]]))
     print(prob_prior.shape)
     
+
 
 
